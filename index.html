@@ -3,7 +3,11 @@
 <head>
   <base target="_top">
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b5cad">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Mi Negocio</title>
   <style>
   :root {
@@ -90,43 +94,83 @@
   .barra {
     position: sticky; top: 0; z-index: 40;
     display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
     background: linear-gradient(90deg, var(--prim), #0a6fd6);
-    color: #fff; padding: 12px 16px;
+    color: #fff; padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
     box-shadow: 0 2px 8px rgba(2, 20, 45, .25);
   }
-  .barra-titulo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; }
-  .logo-mini { font-size: 20px; }
-  .barra-der { display: flex; align-items: center; gap: 8px; }
+  .barra-izq { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+  .btn-menu {
+    border: 0; background: rgba(255,255,255,.16); color: #fff;
+    width: 40px; height: 40px; border-radius: 10px; font-size: 19px;
+    cursor: pointer; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .btn-menu:active { background: rgba(255,255,255,.3); transform: scale(.94); }
+  .logo-mini { font-size: 20px; flex: none; }
+  #titulo-pagina { font-weight: 700; font-size: 16.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .barra-der { display: flex; align-items: center; gap: 8px; flex: none; }
   .chip-tasa {
     background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.25);
-    padding: 5px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+    padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
     white-space: nowrap;
   }
   .chip-tasa.desactivado { opacity: .6; }
 
   .contenido {
-    max-width: 1080px; margin: 0 auto;
-    padding: 16px 14px 96px;
+    width: 100%; max-width: 760px; margin: 0 auto;
+    padding: 14px 12px 108px;
   }
   .cargando { text-align: center; color: var(--texto-suave); padding: 48px 0; }
 
-  .nav-fila {
-    max-width: 1080px; margin: 0 auto;
-    display: flex; gap: 6px; padding: 8px 10px 0;
-    overflow-x: auto; scrollbar-width: none;
-    border-bottom: 1px solid var(--borde);
-    position: sticky; top: 57px; z-index: 30;
-    background: var(--fondo);
+  /* ============ GAVETA (menú lateral deslizable) ============ */
+  .gaveta-fondo {
+    position: fixed; inset: 0; z-index: 70;
+    background: rgba(3, 15, 32, .55);
+    backdrop-filter: blur(2px);
   }
-  .nav-fila::-webkit-scrollbar { display: none; }
-  .nav-item {
+  .gaveta {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 71;
+    width: min(84vw, 320px);
+    background: #fff;
+    box-shadow: 8px 0 30px rgba(2, 20, 45, .3);
+    display: flex; flex-direction: column;
+    transform: translateX(-105%);
+    visibility: hidden;
+    transition: transform .22s ease-out, visibility .22s;
+  }
+  .gaveta.abierta { transform: translateX(0); visibility: visible; }
+  body.gaveta-abierta { overflow: hidden; }
+
+  .gaveta-cab {
+    display: flex; align-items: center; gap: 10px;
+    background: linear-gradient(135deg, var(--prim), #0a6fd6);
+    color: #fff; padding: calc(18px + env(safe-area-inset-top)) 16px 14px;
+  }
+  .gaveta-cab .logo-mini { font-size: 26px; }
+  .gaveta-tit { flex: 1; min-width: 0; }
+  .gaveta-tit strong { font-size: 16px; display: block; }
+  .gaveta-usuario { font-size: 12px; opacity: .9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gaveta-x { color: #fff; font-size: 20px; padding: 4px 8px; }
+
+  .gaveta-nav {
+    flex: 1; overflow-y: auto; padding: 8px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .gaveta-nav .nav-item {
     border: 0; background: transparent; cursor: pointer;
-    font: inherit; color: var(--texto-suave); font-weight: 600;
-    padding: 10px 14px; border-radius: 12px 12px 0 0;
-    white-space: nowrap; display: flex; align-items: center; gap: 6px;
-    border-bottom: 3px solid transparent;
+    font: inherit; font-size: 15px; font-weight: 600; color: var(--texto);
+    display: flex; align-items: center; gap: 12px; text-align: left;
+    width: 100%; min-height: 48px;
+    padding: 12px 14px; border-radius: 12px;
   }
-  .nav-item.activo { color: var(--prim); background: var(--prim-os); border-bottom-color: var(--prim); }
+  .gaveta-nav .nav-item:active { background: var(--prim-os); }
+  .gaveta-nav .nav-item .nav-ic { font-size: 19px; width: 26px; text-align: center; flex: none; }
+  .gaveta-nav .nav-item.activo { background: var(--prim); color: #fff; }
+
+  .gaveta-pie { padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--borde); }
+  .gaveta-vers { text-align: center; margin-top: 10px; color: var(--texto-suave); font-size: 11.5px; }
 
   /* ============ TARJETAS ============ */
   .tarjeta {
@@ -157,7 +201,7 @@
   .k-naranja { color: var(--avis); }
 
   /* ============ TABLAS ============ */
-  .tabla-envoltura { overflow-x: auto; border: 1px solid var(--borde); border-radius: 12px; }
+  .tabla-envoltura { overflow-x: auto; border: 1px solid var(--borde); border-radius: 12px; -webkit-overflow-scrolling: touch; }
   table.tabla { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 620px; }
   .tabla th {
     text-align: left; padding: 9px 10px; background: #f8fafc;
@@ -223,7 +267,7 @@
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
     background: #fff; border-top: 1px solid var(--borde);
     padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
-    max-width: 1080px; margin: 0 auto;
+    max-width: 760px; margin: 0 auto;
     display: flex; gap: 10px; align-items: center;
   }
   .pie-pos .totales { flex: 1; font-weight: 700; line-height: 1.35; }
@@ -292,13 +336,12 @@
   /* ============ MÓVIL / RESPONSIVE ============ */
   @media (max-width: 640px) {
     .login-card { padding: 26px 20px; }
-    .contenido { padding: 12px 10px 96px; }
+    .contenido { padding: 12px 10px 104px; }
     .tarjeta { padding: 14px; }
     .grid-cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
     .card-kpi { padding: 12px; }
     .card-kpi .k-num { font-size: 17px; }
-    .nav-item { padding: 10px 10px; font-size: 13.5px; min-height: 44px; }
-    .chip-tasa { max-width: 34vw; overflow: hidden; text-overflow: ellipsis; font-size: 11.5px; padding: 4px 8px; }
+    .chip-tasa { max-width: 32vw; overflow: hidden; text-overflow: ellipsis; font-size: 11px; padding: 4px 8px; }
     .form-2col { grid-template-columns: 1fr; }
     input, select, textarea { font-size: 16px; }
     .btn { min-height: 44px; }
@@ -313,11 +356,10 @@
   }
   @media (max-width: 380px) {
     .grid-cards { grid-template-columns: 1fr; }
-    .barra-titulo { font-size: 15px; }
+    #titulo-pagina { font-size: 15px; }
   }
-.ver-app{font-size:11px;opacity:.55;margin-left:6px;font-weight:700;letter-spacing:.4px;vertical-align:middle}
+  .ver-app{font-size:11px;opacity:.55;margin-left:6px;font-weight:700;letter-spacing:.4px;vertical-align:middle}
 </style>
-
 </head>
 <body>
 
@@ -326,7 +368,7 @@
     <div class="login-card">
       <div class="logo">🏪</div>
       <h1>Mi Negocio</h1>
-      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v30</span></p>
+      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v31</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button id="btn-login" class="btn btn-primario btn-ancho">Entrar</button>
@@ -337,18 +379,33 @@
   <!-- ============ APLICACIÓN ============ -->
   <div id="app" class="app" hidden>
     <header class="barra">
-      <div class="barra-titulo">
+      <div class="barra-izq">
+        <button id="btn-menu" class="btn-menu" title="Menú" aria-label="Abrir menú">☰</button>
         <span class="logo-mini">🏪</span>
         <span id="titulo-pagina">Inicio</span>
-        <span id="ver-app" class="ver-app">v30</span>
       </div>
       <div class="barra-der">
         <span id="chip-tasa" class="chip-tasa" title="Tasa del día (BCV)">Tasa: …</span>
-        <button id="btn-salir" class="btn-icono" title="Cerrar sesión">⎋</button>
       </div>
     </header>
 
-    <nav id="nav" class="nav-fila"></nav>
+    <!-- ============ GAVETA (menú lateral deslizable) ============ -->
+    <div id="gaveta-fondo" class="gaveta-fondo" hidden onclick="cerrarGaveta()"></div>
+    <aside id="gaveta" class="gaveta" aria-hidden="true">
+      <div class="gaveta-cab">
+        <span class="logo-mini">🏪</span>
+        <div class="gaveta-tit">
+          <strong>Mi Negocio</strong>
+          <div class="gaveta-usuario" id="gaveta-usuario"></div>
+        </div>
+        <button class="btn-icono gaveta-x" onclick="cerrarGaveta()" title="Cerrar" aria-label="Cerrar menú">✕</button>
+      </div>
+      <nav id="nav" class="gaveta-nav"></nav>
+      <div class="gaveta-pie">
+        <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
+        <div class="gaveta-vers">Mi Negocio · <span class="ver-app">v31</span></div>
+      </div>
+    </aside>
 
     <main id="contenido" class="contenido"></main>
 
@@ -1331,12 +1388,32 @@ function tituloDe(p) {
 
 function pintarNav() {
   var nav = el('nav');
+  if (!nav) return;
   nav.innerHTML = paginasVisibles().map(function (p) {
-    return '<button class="nav-item' + (S.pagina === p.id ? ' activo' : '') + '" data-pagina="' + p.id + '">' + p.icono + ' ' + p.etq + '</button>';
+    return '<button class="nav-item' + (S.pagina === p.id ? ' activo' : '') + '" data-pagina="' + p.id + '">' +
+      '<span class="nav-ic">' + p.icono + '</span>' + p.etq + '</button>';
   }).join('');
   Array.prototype.forEach.call(nav.querySelectorAll('.nav-item'), function (b) {
-    b.addEventListener('click', function () { irA(b.getAttribute('data-pagina')); });
+    b.addEventListener('click', function () { irA(b.getAttribute('data-pagina')); cerrarGaveta(); });
   });
+  var gu = el('gaveta-usuario');
+  if (gu) gu.textContent = (S.nombre || S.usuario) + (S.rol === 'admin' ? ' · Admin' : '');
+}
+
+/* ---------- Gaveta (menú lateral) ---------- */
+function abrirGaveta() {
+  var g = el('gaveta');
+  if (!g) return;
+  el('gaveta-fondo').hidden = false;
+  document.body.classList.add('gaveta-abierta');
+  requestAnimationFrame(function () { g.classList.add('abierta'); });
+}
+function cerrarGaveta() {
+  var g = el('gaveta');
+  if (!g) return;
+  g.classList.remove('abierta');
+  document.body.classList.remove('gaveta-abierta');
+  setTimeout(function () { el('gaveta-fondo').hidden = true; }, 250);
 }
 
 function piePosVisible(v) {
@@ -1425,8 +1502,8 @@ async function iniciarApp() {
   // Comprobación de versión: el servidor debe coincidir con esta página.
   API.infoServidor().then(function (sv) {
     try {
-      if (sv && sv.version && sv.version !== 'v30' && window.__avisar) {
-        window.__avisar('La página es v30, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v30).', true);
+      if (sv && sv.version && sv.version !== 'v31' && window.__avisar) {
+        window.__avisar('La página es v31, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v31).', true);
       }
     } catch (e) {}
   }).catch(function () {});
@@ -1809,9 +1886,9 @@ function formularioProducto(prod) {
           var tipo = r === null ? 'null' : r === undefined ? 'undefined' : typeof r;
           var extra = DEMO ? ' La app está en MODO DEMO (sin servidor).' : '';
           API.infoServidor().then(function (sv) {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v30 en la pantalla de entrada).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v31 en la pantalla de entrada).');
           }).catch(function () {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v30).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v31).');
           });
         })();
       }
@@ -2514,6 +2591,7 @@ function resetearClaveUsuario(u) {
 }
 
 /* ---------- Arranque ---------- */
+el('btn-menu').addEventListener('click', abrirGaveta);
 el('btn-login').addEventListener('click', intentarLogin);
 el('in-usr').addEventListener('keydown', function (e) { if (e.key === 'Enter') intentarLogin(); });
 el('in-pwd').addEventListener('keydown', function (e) { if (e.key === 'Enter') intentarLogin(); });
