@@ -226,7 +226,7 @@
   /* ============ FILTROS / BÚSQUEDA ============ */
   .fila-botones { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
   .fila-botones .btn { flex: 1; }
-  .buscador { position: relative; margin-bottom: 10px; }
+  .buscador { position: relative; margin: 14px 0 10px; }
   .buscador input { padding-left: 36px; font-size: 15px; }
   .buscador::before {
     content: "🔍"; position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
@@ -368,7 +368,7 @@
     <div class="login-card">
       <div class="logo">🏪</div>
       <h1>Mi Negocio</h1>
-      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v32</span></p>
+      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v33</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button id="btn-login" class="btn btn-primario btn-ancho">Entrar</button>
@@ -403,7 +403,7 @@
       <nav id="nav" class="gaveta-nav"></nav>
       <div class="gaveta-pie">
         <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
-        <div class="gaveta-vers">Mi Negocio · <span class="ver-app">v32</span></div>
+        <div class="gaveta-vers">Mi Negocio · <span class="ver-app">v33</span></div>
       </div>
     </aside>
 
@@ -1502,8 +1502,8 @@ async function iniciarApp() {
   // Comprobación de versión: el servidor debe coincidir con esta página.
   API.infoServidor().then(function (sv) {
     try {
-      if (sv && sv.version && sv.version !== 'v32' && window.__avisar) {
-        window.__avisar('La página es v32, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v32).', true);
+      if (sv && sv.version && sv.version !== 'v33' && window.__avisar) {
+        window.__avisar('La página es v33, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v33).', true);
       }
     } catch (e) {}
   }).catch(function () {});
@@ -1593,7 +1593,12 @@ render.vender = async function () {
     '<div><label class="campo">Teléfono</label><input id="pos-cli-tel" inputmode="tel" autocomplete="off"></div>' +
     '<div><label class="campo">Dirección</label><input id="pos-cli-dir" autocomplete="off"></div>' +
     '</div></div>' +
-    /* 2) Escáner en vivo (como caja registradora: siempre a la espera) */
+    /* 2) La factura (los artículos que se van agregando) */
+    '<div class="tarjeta"><h2>🛒 Factura</h2><div id="pos-carrito" class="muted">Sin productos todavía. Escanea o busca los artículos.</div></div>' +
+    /* 3) Búsqueda manual */
+    '<div class="buscador"><input id="pos-bus" placeholder="Buscar o escribir código…" autocomplete="off"></div>' +
+    '<div id="pos-sug"></div>' +
+    /* 4) Escáner en vivo (código de barras, al final de la pantalla) */
     '<div class="tarjeta"><h2>📷 Escáner</h2>' +
     '<div id="pos-live" style="width:100%;min-height:150px;border-radius:12px;overflow:hidden;background:#111"></div>' +
     '<p class="muted" id="pos-live-msg" style="margin-top:6px">Toca "▶ Iniciar escáner" y apunta al código: cada artículo se suma solo a la factura, sin salir de aquí.</p>' +
@@ -1604,12 +1609,7 @@ render.vender = async function () {
     '<button class="btn" id="pos-foto">📸 Foto / galería</button>' +
     '</div>' +
     '<p class="muted" style="margin-top:6px"><button class="btn-enlace" id="pos-cam-ayuda">🔒 ¿No abre la cámara? Ver por qué y comprobarla</button></p>' +
-    '</div>' +
-    /* 3) Búsqueda manual */
-    '<div class="buscador"><input id="pos-bus" placeholder="Buscar o escribir código…" autocomplete="off"></div>' +
-    '<div id="pos-sug"></div>' +
-    /* 4) La factura */
-    '<div class="tarjeta"><h2>🛒 Factura</h2><div id="pos-carrito" class="muted">Sin productos todavía. Escanea o busca los artículos.</div></div>'
+    '</div>'
   );
   var pie = el('pie-pos');
   pie.innerHTML =
@@ -1916,9 +1916,9 @@ function formularioProducto(prod) {
           var tipo = r === null ? 'null' : r === undefined ? 'undefined' : typeof r;
           var extra = DEMO ? ' La app está en MODO DEMO (sin servidor).' : '';
           API.infoServidor().then(function (sv) {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v32 en la pantalla de entrada).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v33 en la pantalla de entrada).');
           }).catch(function () {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v32).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v33).');
           });
         })();
       }
