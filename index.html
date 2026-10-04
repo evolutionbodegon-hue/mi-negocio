@@ -368,7 +368,7 @@
     <div class="login-card">
       <div class="logo">🏪</div>
       <h1>Mi Negocio</h1>
-      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v31</span></p>
+      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v32</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button id="btn-login" class="btn btn-primario btn-ancho">Entrar</button>
@@ -403,7 +403,7 @@
       <nav id="nav" class="gaveta-nav"></nav>
       <div class="gaveta-pie">
         <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
-        <div class="gaveta-vers">Mi Negocio · <span class="ver-app">v31</span></div>
+        <div class="gaveta-vers">Mi Negocio · <span class="ver-app">v32</span></div>
       </div>
     </aside>
 
@@ -1502,8 +1502,8 @@ async function iniciarApp() {
   // Comprobación de versión: el servidor debe coincidir con esta página.
   API.infoServidor().then(function (sv) {
     try {
-      if (sv && sv.version && sv.version !== 'v31' && window.__avisar) {
-        window.__avisar('La página es v31, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v31).', true);
+      if (sv && sv.version && sv.version !== 'v32' && window.__avisar) {
+        window.__avisar('La página es v32, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v32).', true);
       }
     } catch (e) {}
   }).catch(function () {});
@@ -1667,13 +1667,33 @@ function buscarEnPos() {
   });
 }
 
+function stockDe(codigo) {
+  var p = prods().find(function (x) { return String(x.codigo).trim() === String(codigo).trim(); });
+  return p ? num(p.stock) : 0;
+}
+
 function agregarAlCarrito(cod, cantidad) {
   var p = prods().find(function (x) { return String(x.codigo).trim() === String(cod).trim(); });
   if (!p) { toast('Producto no encontrado: ' + cod, 'error'); return; }
   if (String(p.activo) !== '1') { toast('"' + p.nombre + '" está desactivado.', 'error'); return; }
+  var stock = num(p.stock);
   var lin = CARRITO.find(function (l) { return l.codigo === String(p.codigo); });
-  if (lin) lin.cantidad += cantidad;
-  else CARRITO.push({ codigo: String(p.codigo), nombre: p.nombre, precio: num(p.precio_usd), stock: num(p.stock), cantidad: cantidad });
+  var enCarrito = lin ? lin.cantidad : 0;
+  var pedido = enCarrito + Math.max(1, num(cantidad) || 1);
+  // Límite del inventario: no se puede pedir más de lo que hay.
+  if (pedido > stock) {
+    if (stock <= 0) {
+      toast('No hay unidades de "' + p.nombre + '" en el inventario.', 'error');
+      return; // no se agrega nada más
+    }
+    if (lin) lin.cantidad = stock;
+    else CARRITO.push({ codigo: String(p.codigo), nombre: p.nombre, precio: num(p.precio_usd), stock: stock, cantidad: stock });
+    pintarCarrito();
+    toast('Solo hay ' + fmtCant(stock) + ' de "' + p.nombre + '". Se puso la cantidad disponible.', 'error');
+    return;
+  }
+  if (lin) lin.cantidad = pedido;
+  else CARRITO.push({ codigo: String(p.codigo), nombre: p.nombre, precio: num(p.precio_usd), stock: stock, cantidad: pedido });
   pintarCarrito();
 }
 
@@ -1681,8 +1701,18 @@ function cambiarCant(idx, delta) {
   var lin = CARRITO[idx];
   if (!lin) return;
   var nueva = lin.cantidad + delta;
-  if (nueva <= 0) CARRITO.splice(idx, 1);
-  else lin.cantidad = nueva;
+  if (nueva <= 0) { CARRITO.splice(idx, 1); pintarCarrito(); return; }
+  // Al subir, nunca pasar del stock disponible.
+  if (delta > 0) {
+    var tope = stockDe(lin.codigo);
+    if (nueva > tope) {
+      lin.cantidad = Math.max(0, tope);
+      pintarCarrito();
+      toast('Solo hay ' + fmtCant(tope) + ' de "' + lin.nombre + '" en el inventario', 'error');
+      return;
+    }
+  }
+  lin.cantidad = nueva;
   pintarCarrito();
 }
 
@@ -1886,9 +1916,9 @@ function formularioProducto(prod) {
           var tipo = r === null ? 'null' : r === undefined ? 'undefined' : typeof r;
           var extra = DEMO ? ' La app está en MODO DEMO (sin servidor).' : '';
           API.infoServidor().then(function (sv) {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v31 en la pantalla de entrada).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v32 en la pantalla de entrada).');
           }).catch(function () {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v31).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v32).');
           });
         })();
       }
