@@ -273,6 +273,63 @@
   .pie-pos .totales { flex: 1; font-weight: 700; line-height: 1.35; }
   .pie-pos .totales small { display: block; color: var(--texto-suave); font-weight: 600; font-size: 12px; }
 
+  /* ============ GAVETA DEL CARRITO (Vender) ============ */
+  /* Se desliza desde la derecha cubriendo el 70%: queda visible el 30% de
+     la sección de ventas para tocar ahí y volver de forma intuitiva. */
+  #carrito-gaveta {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 80;
+    width: 70vw; max-width: 540px;
+    background: var(--tarjeta);
+    border-left: 1px solid var(--borde);
+    border-radius: 18px 0 0 18px;
+    box-shadow: -12px 0 34px rgba(2, 20, 45, .22);
+    display: flex; flex-direction: column;
+    transform: translateX(102%);
+    transition: transform .3s ease;
+  }
+  #carrito-gaveta.abierta { transform: translateX(0); }
+  .cg-cab {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: calc(14px + env(safe-area-inset-top)) 16px 12px;
+    border-bottom: 1px solid var(--borde);
+  }
+  .cg-cab span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .cg-cab small { font-size: 12px; }
+  .cg-cerrar {
+    width: 36px; height: 36px; flex: none; border-radius: 10px; border: 0;
+    background: var(--fondo); color: var(--texto); font-size: 17px; cursor: pointer;
+  }
+  .cg-cerrar:active { background: var(--borde); }
+  .cg-lista {
+    flex: 1; overflow-y: auto; padding: 4px 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .cg-pie {
+    border-top: 1px solid var(--borde);
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    background: #fff;
+  }
+  .cg-pie .cg-totales { flex: 1; font-weight: 700; line-height: 1.35; min-width: 110px; }
+  .cg-pie .cg-totales small { display: block; color: var(--texto-suave); font-weight: 600; font-size: 12px; }
+
+  /* Botón flotante para abrir la factura */
+  .carrito-fab {
+    position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 75;
+    width: 58px; height: 58px; border-radius: 50%; border: 0;
+    background: linear-gradient(135deg, var(--prim), #0a6fd6); color: #fff; font-size: 24px;
+    box-shadow: 0 8px 22px rgba(2, 20, 45, .3); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .carrito-fab:active { transform: scale(.94); }
+  .carrito-fab .fab-badge {
+    position: absolute; top: -4px; right: -4px; min-width: 22px; height: 22px; padding: 0 4px;
+    border-radius: 999px; background: var(--peligro); color: #fff;
+    font-size: 11.5px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .25);
+  }
+
   /* ============ FORMULARIOS ============ */
   .form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
   .categorias { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
@@ -368,7 +425,7 @@
     <div class="login-card">
       <div class="logo">🏪</div>
       <h1>Mi Negocio</h1>
-      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v33</span></p>
+      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v34</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button id="btn-login" class="btn btn-primario btn-ancho">Entrar</button>
@@ -403,7 +460,7 @@
       <nav id="nav" class="gaveta-nav"></nav>
       <div class="gaveta-pie">
         <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
-        <div class="gaveta-vers">Mi Negocio · <span class="ver-app">v33</span></div>
+        <div class="gaveta-vers">Mi Negocio · <span class="ver-app">v34</span></div>
       </div>
     </aside>
 
@@ -470,7 +527,9 @@ var render = {};
       if (!b) {
         b = document.createElement('div');
         b.id = 'alerta-js';
-        b.style.cssText = 'position:fixed;left:8px;right:8px;top:6px;z-index:300;background:#c62828;color:#fff;padding:8px 10px;border-radius:10px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.35);display:none';
+        b.style.cssText = 'position:fixed;left:8px;right:8px;top:6px;z-index:300;background:#c62828;color:#fff;padding:8px 10px;border-radius:10px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.35);display:none;cursor:pointer';
+        b.title = 'Toca para cerrar este aviso';
+        b.addEventListener('click', function () { b.style.display = 'none'; });
         document.body.appendChild(b);
       }
       var texto = msg || 'Error desconocido de la app.';
@@ -1423,6 +1482,7 @@ function piePosVisible(v) {
 
 async function irA(pagina, params) {
   detenerEscaneoVivo(); // si salimos de Vender, apaga la cámara para no dejarla abierta
+  cerrarGavetaCarrito(); // al salir de Vender cerramos la gaveta del carrito
   S.pagina = pagina;
   pintarNav();
   var tl = el('titulo-pagina');
@@ -1502,8 +1562,8 @@ async function iniciarApp() {
   // Comprobación de versión: el servidor debe coincidir con esta página.
   API.infoServidor().then(function (sv) {
     try {
-      if (sv && sv.version && sv.version !== 'v33' && window.__avisar) {
-        window.__avisar('La página es v33, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v33).', true);
+      if (sv && sv.version && sv.version !== 'v34' && window.__avisar) {
+        window.__avisar('La página es v34, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v34).', true);
       }
     } catch (e) {}
   }).catch(function () {});
@@ -1583,7 +1643,7 @@ function metodosHTML() {
 render.vender = async function () {
   await cargarTasaSiYace();
   if (!prods().length) await cargarProductos();
-  piePosVisible(true);
+  piePosVisible(false); // el pago ahora vive dentro de la gaveta del carrito
   pintar(
     /* 1) Datos del cliente */
     '<div class="tarjeta"><h2>🧾 Cliente</h2>' +
@@ -1593,15 +1653,13 @@ render.vender = async function () {
     '<div><label class="campo">Teléfono</label><input id="pos-cli-tel" inputmode="tel" autocomplete="off"></div>' +
     '<div><label class="campo">Dirección</label><input id="pos-cli-dir" autocomplete="off"></div>' +
     '</div></div>' +
-    /* 2) La factura (los artículos que se van agregando) */
-    '<div class="tarjeta"><h2>🛒 Factura</h2><div id="pos-carrito" class="muted">Sin productos todavía. Escanea o busca los artículos.</div></div>' +
-    /* 3) Búsqueda manual */
+    /* 2) Búsqueda manual */
     '<div class="buscador"><input id="pos-bus" placeholder="Buscar o escribir código…" autocomplete="off"></div>' +
     '<div id="pos-sug"></div>' +
-    /* 4) Escáner en vivo (código de barras, al final de la pantalla) */
+    /* 3) Escáner en vivo (código de barras, al final de la pantalla) */
     '<div class="tarjeta"><h2>📷 Escáner</h2>' +
     '<div id="pos-live" style="width:100%;min-height:150px;border-radius:12px;overflow:hidden;background:#111"></div>' +
-    '<p class="muted" id="pos-live-msg" style="margin-top:6px">Toca "▶ Iniciar escáner" y apunta al código: cada artículo se suma solo a la factura, sin salir de aquí.</p>' +
+    '<p class="muted" id="pos-live-msg" style="margin-top:6px">Toca "▶ Iniciar escáner" y apunta al código: cada artículo se suma solo a la factura.</p>' +
     '<p id="pos-live-acc" style="margin-top:6px"></p>' +
     '<div class="fila-botones">' +
     '<button class="btn btn-primario" id="pos-live-ini">▶ Iniciar escáner</button>' +
@@ -1611,14 +1669,7 @@ render.vender = async function () {
     '<p class="muted" style="margin-top:6px"><button class="btn-enlace" id="pos-cam-ayuda">🔒 ¿No abre la cámara? Ver por qué y comprobarla</button></p>' +
     '</div>'
   );
-  var pie = el('pie-pos');
-  pie.innerHTML =
-    '<div class="totales">' +
-    '<div id="pos-tot-usd">Total: $ 0,00</div>' +
-    '<small id="pos-tot-ves">Bs 0,00</small>' +
-    '</div>' +
-    '<select id="pos-metodo" style="width:auto;max-width:150px">' + metodosHTML() + '</select>' +
-    '<button class="btn btn-ok" id="pos-cobrar">Cobrar</button>';
+  asegurarGavetaCarrito();
   var bus = el('pos-bus');
   bus.addEventListener('input', buscarEnPos);
   bus.addEventListener('keydown', function (e) {
@@ -1635,8 +1686,86 @@ render.vender = async function () {
   });
   el('pos-cam-ayuda').addEventListener('click', ayudaCamara);
   el('pos-cobrar').addEventListener('click', cobrarVenta);
+  el('carrito-fab').addEventListener('click', function (e) {
+    e.stopPropagation();
+    gavetaCarritoAbierta() ? cerrarGavetaCarrito() : abrirGavetaCarrito();
+  });
+  el('cg-cerrar').addEventListener('click', function (e) {
+    e.stopPropagation();
+    cerrarGavetaCarrito();
+  });
   pintarCarrito();
 };
+
+/* ============================================================
+   GAVETA DEL CARRITO (Vender)
+   Se desliza desde la derecha cubriendo el 70% del ancho.
+   Queda visible el 30% de la sección de ventas: tocar ahí
+   (o la ✕) cierra la gaveta y vuelves a la caja registradora.
+   ============================================================ */
+function asegurarGavetaCarrito() {
+  if (el('carrito-gaveta')) return;
+  var g = document.createElement('div');
+  g.id = 'carrito-gaveta';
+  g.setAttribute('aria-hidden', 'true');
+  g.innerHTML =
+    '<div class="cg-cab">' +
+    '<span><strong>🛒 Factura</strong><small class="muted" id="cg-cab-n">Sin productos todavía</small></span>' +
+    '<button class="cg-cerrar" id="cg-cerrar" aria-label="Cerrar la factura">✕</button>' +
+    '</div>' +
+    '<div id="pos-carrito" class="cg-lista">Sin productos todavía. Busca, escribe el código o escanea.</div>' +
+    '<div class="cg-pie">' +
+    '<div class="cg-totales">' +
+    '<div id="pos-tot-usd">Total: $ 0,00</div>' +
+    '<small id="pos-tot-ves">Bs 0,00</small>' +
+    '</div>' +
+    '<select id="pos-metodo" style="width:auto;max-width:150px">' + metodosHTML() + '</select>' +
+    '<button class="btn btn-ok" id="pos-cobrar">Cobrar</button>' +
+    '</div>';
+  document.body.appendChild(g);
+  var fab = document.createElement('button');
+  fab.id = 'carrito-fab';
+  fab.className = 'carrito-fab';
+  fab.setAttribute('aria-label', 'Abrir la factura');
+  fab.innerHTML = '🛒<span class="fab-badge" id="carrito-fab-badge" style="display:none">0</span>';
+  document.body.appendChild(fab);
+}
+
+function gavetaCarritoAbierta() {
+  var g = el('carrito-gaveta');
+  return !!(g && g.classList.contains('abierta'));
+}
+
+function abrirGavetaCarrito() {
+  var g = el('carrito-gaveta');
+  if (!g) return;
+  g.classList.add('abierta');
+  g.setAttribute('aria-hidden', 'false');
+  var f = el('carrito-fab');
+  if (f) f.style.display = 'none';
+}
+
+function cerrarGavetaCarrito() {
+  var g = el('carrito-gaveta');
+  if (!g) return;
+  g.classList.remove('abierta');
+  g.setAttribute('aria-hidden', 'true');
+  var f = el('carrito-fab');
+  if (f) f.style.display = '';
+}
+
+// Tocar la parte visible de ventas (el 30% del fondo) cierra la gaveta.
+// Ojo: los avisos (toast) o el resto de la interfaz NO la cierran.
+if (document.addEventListener) {
+  document.addEventListener('click', function (e) {
+    var g = el('carrito-gaveta');
+    if (!g || !g.classList.contains('abierta')) return;
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (t.closest('#carrito-gaveta') || t.closest('#carrito-fab')) return; // toques dentro de la gaveta o en su botón
+    if (t.closest('#contenido')) cerrarGavetaCarrito(); // tocó la sección de ventas (el 30% visible)
+  });
+}
 
 function buscarEnPos() {
   var q = (el('pos-bus').value || '').trim().toLowerCase();
@@ -1673,6 +1802,7 @@ function stockDe(codigo) {
 }
 
 function agregarAlCarrito(cod, cantidad) {
+  var eraVacio = !CARRITO.length;
   var p = prods().find(function (x) { return String(x.codigo).trim() === String(cod).trim(); });
   if (!p) { toast('Producto no encontrado: ' + cod, 'error'); return; }
   if (String(p.activo) !== '1') { toast('"' + p.nombre + '" está desactivado.', 'error'); return; }
@@ -1690,11 +1820,21 @@ function agregarAlCarrito(cod, cantidad) {
     else CARRITO.push({ codigo: String(p.codigo), nombre: p.nombre, precio: num(p.precio_usd), stock: stock, cantidad: stock });
     pintarCarrito();
     toast('Solo hay ' + fmtCant(stock) + ' de "' + p.nombre + '". Se puso la cantidad disponible.', 'error');
+    abrirSiPrimerArticulo(eraVacio);
     return;
   }
   if (lin) lin.cantidad = pedido;
   else CARRITO.push({ codigo: String(p.codigo), nombre: p.nombre, precio: num(p.precio_usd), stock: stock, cantidad: pedido });
   pintarCarrito();
+  abrirSiPrimerArticulo(eraVacio);
+}
+
+// Al agregar el primer artículo se abre la gaveta para "ver lo que se agrega".
+function abrirSiPrimerArticulo(eraVacio) {
+  if (!eraVacio) return;
+  if (!CARRITO.length) return;
+  if (S.pagina !== 'vender') return;
+  abrirGavetaCarrito();
 }
 
 function cambiarCant(idx, delta) {
@@ -1721,6 +1861,18 @@ function pintarCarrito() {
   if (!cont) return;
   var t1 = el('pos-tot-usd');
   var t2 = el('pos-tot-ves');
+  var badge = el('carrito-fab-badge');
+  var cabN = el('cg-cab-n');
+  var unidades = CARRITO.reduce(function (s, l) { return s + l.cantidad; }, 0);
+  var tot = CARRITO.reduce(function (s, l) { return s + l.precio * l.cantidad; }, 0);
+  if (badge) {
+    badge.textContent = String(unidades);
+    badge.style.display = unidades ? '' : 'none';
+  }
+  if (cabN) {
+    cabN.textContent = !unidades ? 'Sin productos todavía'
+      : (unidades === 1 ? '1 artículo' : unidades + ' artículos') + ' · ' + fmtUSD(tot);
+  }
   if (!CARRITO.length) {
     cont.innerHTML = '<div class="muted">Sin productos todavía. Busca, escribe el código o escanea.</div>';
     if (t1) t1.textContent = 'Total: $ 0,00';
@@ -1745,7 +1897,6 @@ function pintarCarrito() {
       cambiarCant(num(b.getAttribute('data-i')), num(b.getAttribute('data-q')));
     });
   });
-  var tot = CARRITO.reduce(function (s, l) { return s + l.precio * l.cantidad; }, 0);
   if (t1) t1.textContent = 'Total: ' + fmtUSD(tot);
   if (t2) t2.textContent = fmtVES(tot * (S.tasa || 0)) + ' (tasa ' + fmtNum(S.tasa || 0) + ')';
 }
@@ -1772,6 +1923,7 @@ async function cobrarVenta() {
     toast(e.message, 'error');
   } finally {
     btn.disabled = false;
+    cerrarGavetaCarrito(); // tras cobrar (o si falla), volvemos a la caja registradora
   }
 }
 
@@ -1916,9 +2068,9 @@ function formularioProducto(prod) {
           var tipo = r === null ? 'null' : r === undefined ? 'undefined' : typeof r;
           var extra = DEMO ? ' La app está en MODO DEMO (sin servidor).' : '';
           API.infoServidor().then(function (sv) {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v33 en la pantalla de entrada).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v34 en la pantalla de entrada).');
           }).catch(function () {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v33).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v34).');
           });
         })();
       }
