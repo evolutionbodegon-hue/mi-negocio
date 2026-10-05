@@ -238,8 +238,13 @@
     display: flex; justify-content: space-between; align-items: center;
     gap: 8px; padding: 10px 0; border-bottom: 1px dashed var(--borde);
   }
+  /* El nombre y el código pueden ser largos: que se ajusten (envuelvan)
+     y NUNCA desborden el ancho (sin barra horizontal). */
+  .pos-art > div:first-child { flex: 1 1 auto; min-width: 0; }
+  .pos-art .negrita, .cg-lista .mono { overflow-wrap: anywhere; }
+  .pos-art .der { flex: none; white-space: nowrap; text-align: right; min-width: 0; }
   .pos-art .cnt {
-    display: flex; align-items: center; gap: 6px;
+    display: flex; align-items: center; gap: 6px; flex: none;
   }
   .cnt-btn {
     width: 32px; height: 32px; border-radius: 9px; border: 0;
@@ -274,11 +279,11 @@
   .pie-pos .totales small { display: block; color: var(--texto-suave); font-weight: 600; font-size: 12px; }
 
   /* ============ GAVETA DEL CARRITO (Vender) ============ */
-  /* Se desliza desde la derecha cubriendo el 70%: queda visible el 30% de
+  /* Se desliza desde la derecha cubriendo el 85%: queda visible el 15% de
      la sección de ventas para tocar ahí y volver de forma intuitiva. */
   #carrito-gaveta {
     position: fixed; top: 0; right: 0; bottom: 0; z-index: 80;
-    width: 70vw; max-width: 540px;
+    width: 85vw; max-width: 620px;
     background: var(--tarjeta);
     border-left: 1px solid var(--borde);
     border-radius: 18px 0 0 18px;
@@ -301,7 +306,7 @@
   }
   .cg-cerrar:active { background: var(--borde); }
   .cg-lista {
-    flex: 1; overflow-y: auto; padding: 4px 16px;
+    flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 16px;
     -webkit-overflow-scrolling: touch;
   }
   .cg-pie {
@@ -425,7 +430,7 @@
     <div class="login-card">
       <div class="logo">🏪</div>
       <h1>Mi Negocio</h1>
-      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v34</span></p>
+      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v35</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button id="btn-login" class="btn btn-primario btn-ancho">Entrar</button>
@@ -460,7 +465,7 @@
       <nav id="nav" class="gaveta-nav"></nav>
       <div class="gaveta-pie">
         <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
-        <div class="gaveta-vers">Mi Negocio · <span class="ver-app">v34</span></div>
+        <div class="gaveta-vers">Mi Negocio · <span class="ver-app">v35</span></div>
       </div>
     </aside>
 
@@ -1562,8 +1567,8 @@ async function iniciarApp() {
   // Comprobación de versión: el servidor debe coincidir con esta página.
   API.infoServidor().then(function (sv) {
     try {
-      if (sv && sv.version && sv.version !== 'v34' && window.__avisar) {
-        window.__avisar('La página es v34, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v34).', true);
+      if (sv && sv.version && sv.version !== 'v35' && window.__avisar) {
+        window.__avisar('La página es v35, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v35).', true);
       }
     } catch (e) {}
   }).catch(function () {});
@@ -1699,8 +1704,8 @@ render.vender = async function () {
 
 /* ============================================================
    GAVETA DEL CARRITO (Vender)
-   Se desliza desde la derecha cubriendo el 70% del ancho.
-   Queda visible el 30% de la sección de ventas: tocar ahí
+   Se desliza desde la derecha cubriendo el 85% del ancho.
+   Queda visible el 15% de la sección de ventas: tocar ahí
    (o la ✕) cierra la gaveta y vuelves a la caja registradora.
    ============================================================ */
 function asegurarGavetaCarrito() {
@@ -2068,9 +2073,9 @@ function formularioProducto(prod) {
           var tipo = r === null ? 'null' : r === undefined ? 'undefined' : typeof r;
           var extra = DEMO ? ' La app está en MODO DEMO (sin servidor).' : '';
           API.infoServidor().then(function (sv) {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v34 en la pantalla de entrada).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v35 en la pantalla de entrada).');
           }).catch(function () {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v34).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v35).');
           });
         })();
       }
