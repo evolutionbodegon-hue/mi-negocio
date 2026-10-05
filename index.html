@@ -454,7 +454,7 @@
     <div class="login-card">
       <div class="logo">🏪</div>
       <h1>Bodegon Evolution</h1>
-      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v39</span></p>
+      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v40</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button id="btn-login" class="btn btn-primario btn-ancho">Entrar</button>
@@ -489,7 +489,7 @@
       <nav id="nav" class="gaveta-nav"></nav>
       <div class="gaveta-pie">
         <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
-        <div class="gaveta-vers">Bodegon Evolution · <span class="ver-app">v39</span></div>
+        <div class="gaveta-vers">Bodegon Evolution · <span class="ver-app">v40</span></div>
       </div>
     </aside>
 
@@ -1648,8 +1648,8 @@ async function iniciarApp() {
   // Comprobación de versión: el servidor debe coincidir con esta página.
   API.infoServidor().then(function (sv) {
     try {
-      if (sv && sv.version && sv.version !== 'v39' && window.__avisar) {
-        window.__avisar('La página es v39, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v39).', true);
+      if (sv && sv.version && sv.version !== 'v40' && window.__avisar) {
+        window.__avisar('La página es v40, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v40).', true);
       }
     } catch (e) {}
   }).catch(function () {});
@@ -2293,9 +2293,9 @@ function formularioProducto(prod) {
           var tipo = r === null ? 'null' : r === undefined ? 'undefined' : typeof r;
           var extra = DEMO ? ' La app está en MODO DEMO (sin servidor).' : '';
           API.infoServidor().then(function (sv) {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v39 en la pantalla de entrada).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v40 en la pantalla de entrada).');
           }).catch(function () {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v39).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v40).');
           });
         })();
       }
@@ -3096,7 +3096,7 @@ async function pintarTasaAdmin() {
   cont.innerHTML = '<div class="fila-entre"><div><div class="k-num k-azul">Bs ' + fmtNum(t.tasa) + ' / $</div>' +
     '<div class="muted">Fecha: ' + esc(t.fecha) + ' · Fuente: ' + esc(fuenteTxt) + '</div></div>' +
     '<span class="etq ' + (t.manual ? 'etq-azul' : 'etq-ok') + '">' + (t.manual ? '✋ Manual' : '✅ Automática') + '</span></div>' +
-    (t.manual ? '<div class="aviso aviso-ok" style="margin-top:10px">Tasa manual activa: las ventas usan <b>Bs ' + fmtNum(t.tasa) + ' / $</b>. Se mantiene hasta que la quites o actualices desde el BCV.</div>' : '') +
+    (t.manual ? '<div class="aviso aviso-ok" style="margin-top:10px">Tasa manual activa: las ventas usan <b>Bs ' + fmtNum(t.tasa) + ' / $</b>. Se quita <b>sola</b> al llegar el próximo día hábil (lunes a viernes); también puedes quitarla aquí o actualizando desde el BCV.</div>' : '') +
     '<div class="fila-botones" style="margin-top:10px">' +
     '<button class="btn btn-primario" id="ad-tasa-act">↻ Actualizar desde BCV</button>' +
     (t.manual
