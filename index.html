@@ -430,6 +430,14 @@
     #titulo-pagina { font-size: 15px; }
   }
   .ver-app{font-size:11px;opacity:.55;margin-left:6px;font-weight:700;letter-spacing:.4px;vertical-align:middle}
+  /* Filtro por categoría (Inventario / Vender) y administrador de categorías */
+  .select-grow { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--borde); border-radius: 10px; background: #fff; font: inherit; }
+  .buscador select.select-grow { margin: 0 0 10px; }
+  .cats-admin { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; max-height: 46vh; overflow-y: auto; }
+  .cat-admin { display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--borde); border-radius: 10px; padding: 6px 10px; background: #fff; }
+  .cat-admin .ca-nombre { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+  .cat-admin input { flex: 1; min-width: 0; }
+  .cat-admin .ca-acc { display: flex; gap: 6px; flex: none; }
 </style>
 </head>
 <body>
@@ -439,7 +447,7 @@
     <div class="login-card">
       <div class="logo">🏪</div>
       <h1>Mi Negocio</h1>
-      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v36</span></p>
+      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v37</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button id="btn-login" class="btn btn-primario btn-ancho">Entrar</button>
@@ -474,7 +482,7 @@
       <nav id="nav" class="gaveta-nav"></nav>
       <div class="gaveta-pie">
         <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
-        <div class="gaveta-vers">Mi Negocio · <span class="ver-app">v36</span></div>
+        <div class="gaveta-vers">Mi Negocio · <span class="ver-app">v37</span></div>
       </div>
     </aside>
 
@@ -513,7 +521,8 @@ var S = {
   fuenteTasa: '',
   pagina: 'inicio',
   cacheProds: [],
-  errProds: ''
+  errProds: '',
+  categoriasExtra: []
 };
 
 var usaRun = (typeof google !== 'undefined' && google.script && google.script.run);
@@ -570,6 +579,56 @@ function pintar(html) { var c = el('contenido'); if (c) c.innerHTML = html; }
 // Los productos SIEMPRE se manejan como arreglo; prods() evita errores si la lista
 // llegara vacía o nula desde el servidor.
 function prods() { return Array.isArray(S.cacheProds) ? S.cacheProds : []; }
+
+/* ---------- CATEGORÍAS ----------
+   La lista es DINÁMICA: categorías fijas + las que tú agregas (se guardan en
+   la hoja) + las que ya están en uso en los productos. Así cada categoría
+   nueva que crees aparece en el desplegable de los demás artículos. */
+var _promCats = null;
+function cargaCategorias() {
+  if (_promCats) return _promCats;
+  _promCats = apiFetch('getCategorias', [S.tok]).then(function (r) {
+    S.categoriasExtra = Array.isArray(r) ? r : [];
+    return S.categoriasExtra;
+  }).catch(function () {
+    S.categoriasExtra = [];
+    return S.categoriasExtra;
+  });
+  return _promCats;
+}
+function listaDeCategorias() {
+  var extra = Array.isArray(S.categoriasExtra) ? S.categoriasExtra : [];
+  var set = {};
+  CATEGORIAS.forEach(function (c) { if (c) set[c] = true; });
+  extra.forEach(function (c) { var n = String(c || '').trim(); if (n) set[n] = true; });
+  prods().forEach(function (p) {
+    var c = String(p.categoria || '').trim();
+    if (c) set[c] = true;
+  });
+  var orden = function (a, b) {
+    if (a === 'General') return -1;
+    if (b === 'General') return 1;
+    return a.localeCompare(b);
+  };
+  return Object.keys(set).sort(orden);
+}
+function opcionesCategorias(conTodos) {
+  var opts = listaDeCategorias().map(function (c) {
+    return '<option value="' + esc(c) + '">' + esc(c) + '</option>';
+  }).join('');
+  return (conTodos ? '<option value="">Todas las categorías</option>' : '') + opts;
+}
+function refrescarSelectCategorias(id, valorActual) {
+  var s = el(id);
+  if (!s) return;
+  var v = valorActual || s.value || '';
+  s.innerHTML = opcionesCategorias(true);
+  var ok = false;
+  if (v) {
+    Array.prototype.some.call(s.options, function (o) { if (String(o.value) === v) { ok = true; return true; } return false; });
+  }
+  s.value = ok ? v : '';
+}
 var _promProd = null;
 function cargarProductos() {
   if (_promProd) return _promProd;
@@ -1528,6 +1587,7 @@ function entrarApp() {
   el('app').hidden = false;
   cargarTasaSiYace(); // precarga la tasa BCV de inmediato (no bloquea)
   cargarProductos();  // precarga el inventario en segundo plano: Vender y el catálogo abren al instante
+  cargaCategorias();  // precarga las categorías extras guardadas en la hoja
   pintarNav();
   irA('inicio');
 }
@@ -1575,8 +1635,8 @@ async function iniciarApp() {
   // Comprobación de versión: el servidor debe coincidir con esta página.
   API.infoServidor().then(function (sv) {
     try {
-      if (sv && sv.version && sv.version !== 'v36' && window.__avisar) {
-        window.__avisar('La página es v36, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v36).', true);
+      if (sv && sv.version && sv.version !== 'v37' && window.__avisar) {
+        window.__avisar('La página es v37, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v37).', true);
       }
     } catch (e) {}
   }).catch(function () {});
@@ -1604,6 +1664,9 @@ function kpi(etiq, num1, num2, sub, clase, ir) {
 render.inicio = async function () {
   await cargarTasaSiYace();
   var aplicar = function (d) {
+    // El refresco del panel (cada 10 s) NO debe pisar otra pantalla:
+    // si el usuario ya cambió de pestaña, este pintado se descarta.
+    if (S.pagina !== 'inicio') return;
     if (!d || typeof d !== 'object') {
       d = {
         tasa: { tasa: S.tasa || 0, fecha: S.fechaTasa || '', fuente: S.fuenteTasa || '' },
@@ -1666,8 +1729,9 @@ render.vender = async function () {
     '<div><label class="campo">Teléfono</label><input id="pos-cli-tel" inputmode="tel" autocomplete="off"></div>' +
     '<div><label class="campo">Dirección</label><input id="pos-cli-dir" autocomplete="off"></div>' +
     '</div></div>' +
-    /* 2) Búsqueda manual */
+    /* 2) Búsqueda manual (con filtro por categoría) */
     '<div class="buscador"><input id="pos-bus" placeholder="Buscar o escribir código…" autocomplete="off"></div>' +
+    '<select id="pos-cat" class="select-grow" style="width:100%;margin:0 0 4px">' + opcionesCategorias(true) + '</select>' +
     '<div id="pos-sug"></div>' +
     /* 3) Escáner en vivo (código de barras, al final de la pantalla) */
     '<div class="tarjeta"><h2>📷 Escáner</h2>' +
@@ -1691,6 +1755,7 @@ render.vender = async function () {
       if (cod) { agregarAlCarrito(cod, 1); bus.value = ''; }
     }
   });
+  el('pos-cat').addEventListener('change', buscarEnPos);
   el('pos-live-ini').addEventListener('click', iniciarEscaneoVivo);
   el('pos-live-det').addEventListener('click', detenerEscaneoVivo);
   el('pos-foto').addEventListener('click', function () {
@@ -1795,9 +1860,11 @@ function buscarEnPos() {
   var cont = el('pos-sug');
   if (!cont) return;
   if (!q) { cont.innerHTML = ''; return; }
+  var cat = el('pos-cat') ? (el('pos-cat').value || '').trim() : '';
   var lista = prods().filter(function (p) {
-    return String(p.activo) === '1' &&
-      (String(p.nombre).toLowerCase().indexOf(q) >= 0 || String(p.codigo).toLowerCase().indexOf(q) >= 0);
+    if (String(p.activo) !== '1') return false;
+    if (cat && String(p.categoria || '').trim() !== cat) return false;
+    return String(p.nombre).toLowerCase().indexOf(q) >= 0 || String(p.codigo).toLowerCase().indexOf(q) >= 0;
   }).slice(0, 8);
   if (!lista.length) {
     cont.innerHTML = '<div class="aviso aviso-error" style="margin-top:8px">Sin resultados para "' + esc(q) + '"</div>';
@@ -1964,6 +2031,10 @@ render.productos = async function () {
   var esAdmin = S.rol === 'admin';
   pintar(
     '<div class="buscador"><input id="prod-bus" placeholder="Filtrar productos…" autocomplete="off"></div>' +
+    '<div class="fila-botones" style="margin:0 0 8px">' +
+    '<select id="prod-cat" class="select-grow">' + opcionesCategorias(true) + '</select>' +
+    (esAdmin ? '<button class="btn" id="prod-cats" title="Administrar categorías">🏷️ Categorías</button>' : '') +
+    '</div>' +
     '<div class="fila-botones">' +
     (esAdmin ? '<button class="btn btn-primario" id="prod-nuevo">＋ Nuevo producto</button>' : '') +
     '<button class="btn" id="prod-scan">📷 Escanear</button>' +
@@ -1976,6 +2047,7 @@ render.productos = async function () {
     el('prod-scan').addEventListener('click', function () {
       abrirScanner(function (codigo) { formularioProductoPorCodigo(codigo); });
     });
+    el('prod-cats').addEventListener('click', function () { modalCategorias(null); });
   } else {
     el('prod-scan').addEventListener('click', function () {
       abrirScanner(function (codigo) { verProducto(codigo); });
@@ -1983,26 +2055,30 @@ render.productos = async function () {
   }
   el('prod-reload').addEventListener('click', async function () {
     await cargarProductos();
-    pintarTablaProductos(el('prod-bus').value);
+    refrescarSelectCategorias('prod-cat', '');
+    pintarTablaProductos(el('prod-bus').value, el('prod-cat').value);
     toast('Inventario recargado', 'ok');
   });
-  el('prod-bus').addEventListener('input', function () { pintarTablaProductos(this.value); });
-  pintarTablaProductos('');
+  el('prod-bus').addEventListener('input', function () { pintarTablaProductos(this.value, el('prod-cat').value); });
+  el('prod-cat').addEventListener('change', function () { pintarTablaProductos(el('prod-bus').value, this.value); });
+  pintarTablaProductos('', '');
 };
 
-function pintarTablaProductos(q) {
+function pintarTablaProductos(q, cat) {
   var cont = el('prod-tabla');
   if (!cont) return;
   if (S.errProds) {
     cont.innerHTML = '<div class="tarjeta" style="border-left:4px solid #c62828"><b>⚠️ No se pudo cargar el inventario:</b> ' + esc(S.errProds) +
       '<div style="margin-top:8px"><button class="btn" id="prod-reintentar">↻ Reintentar</button></div></div>';
     var br = el('prod-reintentar');
-    if (br) br.addEventListener('click', async function () { S.errProds = ''; await cargarProductos(); pintarTablaProductos(''); });
+    if (br) br.addEventListener('click', async function () { S.errProds = ''; await cargarProductos(); pintarTablaProductos('', ''); });
     return;
   }
   var ql = (q || '').trim().toLowerCase();
+  var cat = (cat || '').trim();
   var lista = prods().filter(function (p) {
     if (ql && String(p.nombre).toLowerCase().indexOf(ql) < 0 && String(p.codigo).toLowerCase().indexOf(ql) < 0) return false;
+    if (cat && String(p.categoria || '').trim() !== cat) return false;
     return true;
   });
   if (!lista.length) { cont.innerHTML = '<div class="tarjeta muted">No hay productos.</div>'; return; }
@@ -2043,6 +2119,104 @@ function pintarTablaProductos(q) {
   });
 }
 
+/* ---------- ADMINISTRAR CATEGORÍAS (solo admin) ---------- */
+function modalCategorias(editando) {
+  var cats = listaDeCategorias();
+  abrirModal(
+    '<div class="modal-tope"><h3>🏷️ Categorías</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
+    '<label class="campo">Agregar categoría</label>' +
+    '<div class="fila-botones"><input id="gc-nueva" placeholder="Nombre de la categoría…" autocomplete="off">' +
+    '<button class="btn btn-primario" id="gc-add">＋ Agregar</button></div>' +
+    '<div class="cats-admin" id="gc-lista">' +
+    cats.map(function (c) {
+      if (c === editando) {
+        return '<div class="cat-admin" data-cat="' + esc(c) + '">' +
+          '<input id="gc-renombrar" value="' + esc(c) + '" autocomplete="off">' +
+          '<span class="ca-acc">' +
+          '<button class="btn btn-primario" style="padding:4px 10px" id="gc-ren-ok">✓</button>' +
+          '<button class="btn btn-suave" style="padding:4px 10px" id="gc-ren-cancel">✕</button>' +
+          '</span></div>';
+      }
+      var fija = c === 'General';
+      return '<div class="cat-admin" data-cat="' + esc(c) + '">' +
+        '<span class="ca-nombre"' + (fija ? ' style="opacity:.55"' : '') + '>' + esc(c) + '</span>' +
+        (fija ? '<small class="muted"> fija</small>' : '') +
+        '<span class="ca-acc">' +
+        (fija ? '' : '<button class="btn" style="padding:4px 9px" data-ca="edit">✏️</button>') +
+        (fija ? '' : '<button class="btn btn-suave" style="padding:4px 9px" data-ca="del">🗑</button>') +
+        '</span></div>';
+    }).join('') +
+    '</div>' +
+    '<p class="muted" style="margin-top:10px;font-size:12px">Renombrar cambia la categoría en todos los productos que la usan. Al eliminar, esos productos pasan a "General".</p>'
+  );
+  el('gc-add').addEventListener('click', async function () {
+    var n = el('gc-nueva').value.trim();
+    if (!n) { toast('Escribe el nombre de la categoría', 'error'); return; }
+    try {
+      var lista = await apiFetch('guardarCategoria', [S.tok, n]);
+      if (Array.isArray(lista)) { S.categoriasExtra = lista; _promCats = null; }
+      toast('Categoría agregada: ' + n, 'ok');
+      reabrirCategorias(null);
+    } catch (e) { toast((e && e.message) || 'No se pudo guardar la categoría', 'error'); }
+  });
+  Array.prototype.forEach.call(el('gc-lista').querySelectorAll('[data-ca]'), function (b) {
+    b.addEventListener('click', function () {
+      var fila = b.closest('.cat-admin');
+      var cat = fila.getAttribute('data-cat');
+      if (b.getAttribute('data-ca') === 'edit') {
+        reabrirCategorias(cat);
+      } else if (b.getAttribute('data-ca') === 'del') {
+        fila.innerHTML = '<span class="ca-nombre">¿Eliminar "' + esc(cat) + '"?</span>' +
+          '<span class="ca-acc">' +
+          '<button class="btn btn-peligro" style="padding:4px 10px" data-ca="del-ok">Sí</button>' +
+          '<button class="btn btn-suave" style="padding:4px 10px" data-ca="del-no">No</button>' +
+          '</span>';
+        var okBtn = fila.querySelector('[data-ca="del-ok"]');
+        var noBtn = fila.querySelector('[data-ca="del-no"]');
+        if (okBtn) okBtn.addEventListener('click', async function () {
+          try {
+            var lista2 = await apiFetch('eliminarCategoria', [S.tok, cat]);
+            if (Array.isArray(lista2)) { S.categoriasExtra = lista2; _promCats = null; }
+            await cargarProductos();
+            refrescarInventarioTrasCategorias();
+            toast('Categoría eliminada: ' + cat, 'ok');
+            cerrarModal();
+          } catch (e) { toast((e && e.message) || 'No se pudo eliminar la categoría', 'error'); }
+        });
+        if (noBtn) noBtn.addEventListener('click', function () { reabrirCategorias(null); });
+      }
+    });
+  });
+  var ren = el('gc-renombrar');
+  var rOk = el('gc-ren-ok');
+  var rCan = el('gc-ren-cancel');
+  if (ren && rOk) rOk.addEventListener('click', async function () {
+    var nueva = ren.value.trim();
+    if (!nueva) { toast('Escribe el nombre de la categoría', 'error'); return; }
+    if (nueva === editando) { reabrirCategorias(null); return; }
+    try {
+      var lista3 = await apiFetch('renombrarCategoria', [S.tok, editando, nueva]);
+      if (Array.isArray(lista3)) { S.categoriasExtra = lista3; _promCats = null; }
+      await cargarProductos();
+      refrescarInventarioTrasCategorias();
+      toast('Categoría renombrada a "' + nueva + '"', 'ok');
+      reabrirCategorias(null);
+    } catch (e) { toast((e && e.message) || 'No se pudo renombrar la categoría', 'error'); }
+  });
+  if (ren && rCan) rCan.addEventListener('click', function () { reabrirCategorias(null); });
+}
+
+function reabrirCategorias(editando) {
+  cerrarModal();
+  modalCategorias(editando);
+}
+
+function refrescarInventarioTrasCategorias() {
+  if (!el('prod-cat')) return;
+  refrescarSelectCategorias('prod-cat', '');
+  pintarTablaProductos(el('prod-bus') ? el('prod-bus').value : '', el('prod-cat').value);
+}
+
 function formularioProducto(prod) {
   var ed = !!(prod && prod.codigo);
   var p = prod || { codigo: '', nombre: '', categoria: 'General', precio_usd: '', costo_usd: '', stock: 0, stock_min: 0, activo: 1 };
@@ -2053,7 +2227,7 @@ function formularioProducto(prod) {
     (!ed ? '<button class="btn" id="f-scan">📷</button>' : '') + '</div>' +
     '<label class="campo">Nombre</label><input id="f-nom" value="' + esc(p.nombre) + '">' +
     '<label class="campo">Categoría</label><input id="f-cat" list="lst-cat" value="' + esc(p.categoria || '') + '">' +
-    '<datalist id="lst-cat">' + CATEGORIAS.map(function (c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist>' +
+    '<datalist id="lst-cat">' + opcionesCategorias(false) + '</datalist>' +
     '<div class="form-2col">' +
     '<div><label class="campo">Precio ($)</label><input id="f-precio" type="number" step="0.01" min="0" value="' + esc(p.precio_usd) + '"></div>' +
     '<div><label class="campo">Costo ($)</label><input id="f-costo" type="number" step="0.01" min="0" value="' + esc(p.costo_usd || '') + '"></div>' +
@@ -2086,20 +2260,28 @@ function formularioProducto(prod) {
         activo: el('f-activo').checked ? 1 : 0
       };
       var r = await API.guardarProducto(datos);
+      // Si la categoría es nueva, se guarda en la hoja (aparece en el
+      // desplegable de los demás artículos aunque aún no tenga otros productos).
+      if (datos.categoria && datos.categoria !== 'General') {
+        try {
+          var nuevaLista = await apiFetch('guardarCategoria', [S.tok, datos.categoria]);
+          if (Array.isArray(nuevaLista)) { S.categoriasExtra = nuevaLista; _promCats = null; }
+        } catch (e) {}
+      }
       // Aviso de éxito ANTES de cerrar/redibujar, para que nunca se pierda.
       toast(ed ? 'Producto actualizado' : 'Producto creado', 'ok');
       cerrarModal();
       await cargarProductos();
       var bus = el('prod-bus');
-      pintarTablaProductos(bus ? bus.value : '');
+      pintarTablaProductos(bus ? bus.value : '', el('prod-cat') ? el('prod-cat').value : '');
       if (!r && window.__avisar) {
         (function () {
           var tipo = r === null ? 'null' : r === undefined ? 'undefined' : typeof r;
           var extra = DEMO ? ' La app está en MODO DEMO (sin servidor).' : '';
           API.infoServidor().then(function (sv) {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v36 en la pantalla de entrada).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v37 en la pantalla de entrada).');
           }).catch(function () {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v36).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v37).');
           });
         })();
       }
