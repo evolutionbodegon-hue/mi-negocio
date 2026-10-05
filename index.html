@@ -8,7 +8,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Mi Negocio</title>
+  <title>Bodegon Evolution</title>
   <style>
   :root {
     --prim: #0b5cad;
@@ -438,6 +438,13 @@
   .cat-admin .ca-nombre { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
   .cat-admin input { flex: 1; min-width: 0; }
   .cat-admin .ca-acc { display: flex; gap: 6px; flex: none; }
+
+  /* ============ REPORTES COMPARATIVOS ============ */
+  .rep-per { box-shadow: var(--sombra); }
+  .rep-per-cab { font-weight: 800; font-size: 13.5px; color: var(--prim); margin-bottom: 6px; }
+  .rep-monto { white-space: nowrap; }
+  .rep-bs { font-size: 11.5px; color: var(--texto-suave); font-weight: 600; }
+  .rep-per .k-num { font-size: 17px; }
 </style>
 </head>
 <body>
@@ -446,8 +453,8 @@
   <div id="pantalla-login" class="p-login" hidden>
     <div class="login-card">
       <div class="logo">🏪</div>
-      <h1>Mi Negocio</h1>
-      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v37</span></p>
+      <h1>Bodegon Evolution</h1>
+      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v38</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button id="btn-login" class="btn btn-primario btn-ancho">Entrar</button>
@@ -474,7 +481,7 @@
       <div class="gaveta-cab">
         <span class="logo-mini">🏪</span>
         <div class="gaveta-tit">
-          <strong>Mi Negocio</strong>
+          <strong>Bodegon Evolution</strong>
           <div class="gaveta-usuario" id="gaveta-usuario"></div>
         </div>
         <button class="btn-icono gaveta-x" onclick="cerrarGaveta()" title="Cerrar" aria-label="Cerrar menú">✕</button>
@@ -482,7 +489,7 @@
       <nav id="nav" class="gaveta-nav"></nav>
       <div class="gaveta-pie">
         <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
-        <div class="gaveta-vers">Mi Negocio · <span class="ver-app">v37</span></div>
+        <div class="gaveta-vers">Bodegon Evolution · <span class="ver-app">v38</span></div>
       </div>
     </aside>
 
@@ -500,7 +507,7 @@
   -->
   <script>
 /* ============================================================
-   MI NEGOCIO — Lógica del cliente
+   BODEGON EVOLUTION — Lógica del cliente
    Se ejecuta en el navegador (Android, iPhone, PC).
    ============================================================ */
 
@@ -893,7 +900,8 @@ var API = {
   listarRemodGastos: function (rid) { return apiLlamada('listarRemodGastos', [S.tok, rid]); },
   guardarRemodGasto: function (g) { return apiGrabar('guardarRemodGasto', [S.tok, g], ['remodgastos', 'remodelaciones']); },
   eliminarRemodGasto: function (id) { return apiGrabar('eliminarRemodGasto', [S.tok, id], ['remodgastos']); },
-  getDashboard: function () { return apiLlamada('getDashboard', [S.tok]); }
+  getDashboard: function () { return apiLlamada('getDashboard', [S.tok]); },
+  reporteComparativo: function (tipo, a, b) { return apiLlamada('reporteComparativo', [S.tok, tipo, a, b]); }
 };
 
 // Las escrituras borran la caché local de lo que cambian, para que la siguiente
@@ -1484,6 +1492,7 @@ var PAGINAS = [
   { id: 'vender', etq: 'Vender', icono: '🛒', admin: false },
   { id: 'productos', etq: 'Inventario', icono: '📦', admin: false },
   { id: 'ventas', etq: 'Ventas', icono: '🧾', admin: false },
+  { id: 'reportes', etq: 'Reportes', icono: '📊', admin: true },
   { id: 'gastos', etq: 'Gastos', icono: '💸', admin: true },
   { id: 'nomina', etq: 'Nómina', icono: '👥', admin: true },
   { id: 'remodelaciones', etq: 'Obras', icono: '🏗️', admin: true },
@@ -1514,7 +1523,7 @@ function tipoGasto(t) {
 }
 function tituloDe(p) {
   var f = PAGINAS.find(function (x) { return x.id === p; });
-  return f ? f.etq : 'Mi Negocio';
+  return f ? f.etq : 'Bodegon Evolution';
 }
 
 function pintarNav() {
@@ -1635,8 +1644,8 @@ async function iniciarApp() {
   // Comprobación de versión: el servidor debe coincidir con esta página.
   API.infoServidor().then(function (sv) {
     try {
-      if (sv && sv.version && sv.version !== 'v37' && window.__avisar) {
-        window.__avisar('La página es v37, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v37).', true);
+      if (sv && sv.version && sv.version !== 'v38' && window.__avisar) {
+        window.__avisar('La página es v38, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v38).', true);
       }
     } catch (e) {}
   }).catch(function () {});
@@ -2279,9 +2288,9 @@ function formularioProducto(prod) {
           var tipo = r === null ? 'null' : r === undefined ? 'undefined' : typeof r;
           var extra = DEMO ? ' La app está en MODO DEMO (sin servidor).' : '';
           API.infoServidor().then(function (sv) {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v37 en la pantalla de entrada).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v38 en la pantalla de entrada).');
           }).catch(function () {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v37).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v38).');
           });
         })();
       }
@@ -2472,6 +2481,165 @@ function verDetalleVenta(v) {
     '<div class="fila-entre"><span>Total Bs (tasa ' + fmtNum(v.tasa) + ')</span><span>' + fmtVES(v.total_ves) + '</span></div>' +
     (v.nota ? '<p class="muted">Nota: ' + esc(v.nota) + '</p>' : '')
   );
+}
+
+/* ============================================================
+   PANTALLA: REPORTES COMPARATIVOS (solo administrador)
+   Compara dos periodos (día, semana, mes o año): cuánto se
+   ingresó (ventas), cuánto se egresó (gastos + sueldos pagados +
+   obras) y cuánto quedó libre, todo en $ y en Bs.
+   ============================================================ */
+var REP_TIPOS = [
+  ['dia', 'Día vs día', 'date'],
+  ['semana', 'Semana vs semana', 'date'],
+  ['mes', 'Mes vs mes', 'month'],
+  ['anio', 'Año vs año', 'number']
+];
+
+// Periodo "actual" (cual = 0) o "anterior" (cual = 1) para cada tipo.
+function repPeriodo(tipo, cual) {
+  var hoy = new Date();
+  var fDM = function (d) {
+    var m = ('0' + (d.getMonth() + 1)).slice(-2);
+    var dd = ('0' + d.getDate()).slice(-2);
+    return d.getFullYear() + '-' + m + '-' + dd;
+  };
+  if (tipo === 'dia') {
+    var d = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - cual);
+    return fDM(d);
+  }
+  if (tipo === 'semana') {
+    var ds = hoy.getDay(), off = ds === 0 ? -6 : 1 - ds;
+    var lun = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + off - cual * 7);
+    return fDM(lun);
+  }
+  if (tipo === 'mes') {
+    var m2 = new Date(hoy.getFullYear(), hoy.getMonth() - cual, 1);
+    return m2.getFullYear() + '-' + ('0' + (m2.getMonth() + 1)).slice(-2);
+  }
+  return String(hoy.getFullYear() - cual);
+}
+
+render.reportes = async function () {
+  pintar(
+    '<div class="tarjeta"><h2>📊 Reportes comparativos</h2>' +
+    '<p class="muted">Compara dos periodos: cuánto ingresaste, cuánto egresaste y cuánto quedó libre del negocio, en dólares ($) y bolívares (Bs).</p>' +
+    '<label class="campo">Comparar por</label>' +
+    '<select id="rep-tipo">' + REP_TIPOS.map(function (t) {
+      return '<option value="' + t[0] + '"' + (t[0] === 'mes' ? ' selected' : '') + '>' + t[1] + '</option>';
+    }).join('') + '</select>' +
+    '<div class="form-2col" style="margin-top:4px">' +
+    '<div><label class="campo" id="rep-lab-a">Periodo A</label><input id="rep-a"></div>' +
+    '<div><label class="campo" id="rep-lab-b">Periodo B</label><input id="rep-b"></div>' +
+    '</div>' +
+    '<div class="fila-botones">' +
+    '<button class="btn btn-primario" id="rep-go">Generar comparación</button>' +
+    '<button class="btn" id="rep-recientes">↻ Actual vs anterior</button>' +
+    '</div></div>' +
+    '<div id="rep-res"><div class="cargando">Calculando…</div></div>'
+  );
+  var res = el('rep-res');
+  function configInputs() {
+    var t = el('rep-tipo').value;
+    var ta = REP_TIPOS.find(function (x) { return x[0] === t; });
+    var a = el('rep-a'), b = el('rep-b');
+    a.type = ta[2]; b.type = ta[2];
+    a.value = repPeriodo(t, 0);
+    b.value = repPeriodo(t, 1);
+    if (ta[2] === 'number') { a.min = 2000; a.max = 2100; a.step = 1; b.min = 2000; b.max = 2100; b.step = 1; }
+    if (t === 'dia') { el('rep-lab-a').textContent = 'Día A'; el('rep-lab-b').textContent = 'Día B (anterior)'; }
+    else if (t === 'semana') {
+      el('rep-lab-a').textContent = 'Semana A (cualquier día)';
+      el('rep-lab-b').textContent = 'Semana B (cualquier día)';
+    }
+    else if (t === 'mes') { el('rep-lab-a').textContent = 'Mes A'; el('rep-lab-b').textContent = 'Mes B (anterior)'; }
+    else { el('rep-lab-a').textContent = 'Año A'; el('rep-lab-b').textContent = 'Año B (anterior)'; }
+  }
+  async function generar() {
+    var t = el('rep-tipo').value;
+    var a = el('rep-a').value.trim();
+    var b = el('rep-b').value.trim();
+    if (!a || !b) { toast('Indica los dos periodos a comparar.', 'error'); return; }
+    if (a === b) { toast('Los dos periodos son iguales: elige dos distintos.', 'error'); return; }
+    res.innerHTML = '<div class="cargando">Calculando…</div>';
+    try {
+      var r = await API.reporteComparativo(t, a, b);
+      if (S.pagina !== 'reportes') return; // el usuario ya cambió de pantalla
+      pintarReporte(r);
+    } catch (e) {
+      if (S.pagina !== 'reportes') return;
+      res.innerHTML = '<div class="tarjeta"><div class="aviso aviso-error">' + esc((e && e.message) || 'No se pudo generar el reporte.') + '</div></div>';
+    }
+  }
+  el('rep-a').addEventListener('keydown', function (e) { if (e.key === 'Enter') generar(); });
+  el('rep-b').addEventListener('keydown', function (e) { if (e.key === 'Enter') generar(); });
+  el('rep-tipo').addEventListener('change', function () { configInputs(); generar(); });
+  el('rep-go').addEventListener('click', generar);
+  el('rep-recientes').addEventListener('click', function () { configInputs(); generar(); });
+  configInputs();
+  generar(); // muestra de entrada el periodo actual vs el anterior
+};
+
+function pintarReporte(r) {
+  var A = r.A, B = r.B, res = el('rep-res');
+  if (!res) return;
+  function repLinea(nombre, usd, ves, cl) {
+    return '<div class="d-lin"><span>' + nombre + '</span>' +
+      '<span class="negrita' + (cl ? ' ' + cl : '') + '">' + fmtUSD(usd) + '<small class="rep-bs"> (' + fmtVES(ves) + ')</small></span></div>';
+  }
+  function bloq(p, letra) {
+    return '<div class="tarjeta rep-per"><div class="rep-per-cab">' + letra + ' · ' + esc(p.etiqueta) + '</div>' +
+      '<div class="detalle-venta">' +
+      repLinea('💵 Ventas (ingreso)', p.ingreso_usd, p.ingreso_ves, 'k-verde') +
+      repLinea('💸 Egresos', p.egreso_usd, p.egreso_ves, 'k-rojo') +
+      repLinea('🧮 Quedó libre', p.libre_usd, p.libre_ves, p.libre_usd < 0 ? 'k-rojo' : 'k-azul') +
+      '</div>' +
+      '<p class="muted" style="margin-top:8px">' + p.ventas + ' ventas · ' + p.gastos + ' gastos · ' +
+      p.sueldos + ' sueldos · ' + p.obras + ' gastos de obras' +
+      (p.tasa ? ' · tasa media Bs ' + fmtNum(p.tasa) : '') + '</p></div>';
+  }
+  function celda(usd, ves, conSigno, cl) {
+    return '<td class="der">' +
+      '<div class="rep-monto' + (cl ? ' ' + cl : '') + '">' + (conSigno && usd >= 0 ? '+' : '') + fmtUSD(usd) + '</div>' +
+      '<div class="rep-monto rep-bs' + (cl ? ' ' + cl : '') + '">' + (conSigno && ves >= 0 ? '+' : '') + fmtVES(ves) + '</div></td>';
+  }
+  var filas = [
+    { n: 'Ventas (ingreso)', aU: num(A.ingreso_usd), aV: num(A.ingreso_ves), bU: num(B.ingreso_usd), bV: num(B.ingreso_ves), clA: '', clB: '' },
+    { n: 'Gastos', aU: num(A.gastos_usd), aV: num(A.gastos_usd) * num(A.tasa), bU: num(B.gastos_usd), bV: num(B.gastos_usd) * num(B.tasa) },
+    { n: 'Sueldos pagados', aU: num(A.sueldos_usd), aV: num(A.sueldos_usd) * num(A.tasa), bU: num(B.sueldos_usd), bV: num(B.sueldos_usd) * num(B.tasa) },
+    { n: 'Gastos de obras', aU: num(A.obras_usd), aV: num(A.obras_usd) * num(A.tasa), bU: num(B.obras_usd), bV: num(B.obras_usd) * num(B.tasa) },
+    { n: '💸 Total egresos', aU: num(A.egreso_usd), aV: num(A.egreso_ves), bU: num(B.egreso_usd), bV: num(B.egreso_ves), clA: 'k-rojo', clB: 'k-rojo' },
+    { n: '🧮 Quedó libre', aU: num(A.libre_usd), aV: num(A.libre_ves), bU: num(B.libre_usd), bV: num(B.libre_ves), clA: num(A.libre_usd) < 0 ? 'k-rojo' : 'k-azul', clB: num(B.libre_usd) < 0 ? 'k-rojo' : 'k-azul' }
+  ];
+  var dLib = num(B.libre_usd) - num(A.libre_usd);
+  var dLibVes = num(B.libre_ves) - num(A.libre_ves);
+  var balCl = Math.abs(dLib) < 0.005 ? 'muted' : (dLib > 0 ? 'k-verde' : 'k-rojo');
+  res.innerHTML =
+    '<div class="grid-cards" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">' + bloq(A, 'A') + bloq(B, 'B') + '</div>' +
+    '<div class="tarjeta" style="margin-top:14px"><h2>⚖️ Comparación</h2>' +
+    '<div class="tabla-envoltura" style="margin-top:8px"><table class="tabla" style="min-width:560px"><thead><tr>' +
+    '<th>Concepto</th><th class="der">Periodo A</th><th class="der">Periodo B</th><th class="der">Diferencia (B − A)</th>' +
+    '</tr></thead><tbody>' +
+    filas.map(function (f) {
+      var dU = f.bU - f.aU, dV = f.bV - f.aV;
+      var clD = Math.abs(dU) < 0.005 ? '' : (dU > 0 ? 'k-verde' : 'k-rojo');
+      return '<tr>' +
+        '<td class="negrita">' + f.n + '</td>' +
+        celda(f.aU, f.aV, false, f.clA) +
+        celda(f.bU, f.bV, false, f.clB) +
+        celda(dU, dV, true, clD) +
+        '</tr>';
+    }).join('') +
+    '</tbody></table></div>' +
+    '<div class="fila-entre" style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--borde)">' +
+    '<span class="negrita">Balance del periodo B vs A</span>' +
+    '<span class="negrita ' + balCl + '">' +
+    (dLib >= 0 ? 'Quedó libre ' + fmtUSD(dLib) + ' MÁS' : 'Quedó libre ' + fmtUSD(Math.abs(dLib)) + ' MENOS') +
+    '<small class="rep-bs"> (' + fmtVES(Math.abs(dLibVes)) + ')</small></span></div>' +
+    '<p class="muted" style="margin-top:8px">Los Bs de egresos se convierten con la tasa media de cada periodo' +
+    ' (A: 1 $ = Bs ' + fmtNum(A.tasa) + ' · B: 1 $ = Bs ' + fmtNum(B.tasa) + ').' +
+    ' Los Bs de ventas son los reales con los que se cobró.</p>' +
+    '</div>';
 }
 
 /* ============================================================
