@@ -317,6 +317,13 @@
   }
   .cg-pie .cg-totales { flex: 1; font-weight: 700; line-height: 1.35; min-width: 110px; }
   .cg-pie .cg-totales small { display: block; color: var(--texto-suave); font-weight: 600; font-size: 12px; }
+  /* Campo para especificar cuando el método es "Otro" */
+  .cg-otro {
+    flex: 1 1 100%; margin-top: 2px;
+    border: 1px solid var(--borde); border-radius: 10px;
+    padding: 10px 12px; font: inherit; background: var(--fondo);
+  }
+  .cg-otro:focus { outline: 2px solid var(--prim); background: #fff; }
 
   /* Botón flotante para abrir la factura */
   .carrito-fab {
@@ -412,6 +419,8 @@
     .pie-pos { flex-wrap: wrap; }
     .pie-pos .totales { width: 100%; }
     .pie-pos select { flex: 1 1 100%; }
+    .cg-pie .cg-totales { width: 100%; flex: 1 1 100%; min-width: 0; }
+    .cg-pie #pos-metodo { flex: 1 1 auto; max-width: none; }
     table.tabla { font-size: 12.5px; }
     .cat-chip { padding: 8px 12px; }
     .resumen-venta { gap: 8px; }
@@ -430,7 +439,7 @@
     <div class="login-card">
       <div class="logo">🏪</div>
       <h1>Mi Negocio</h1>
-      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v35</span></p>
+      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v36</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button id="btn-login" class="btn btn-primario btn-ancho">Entrar</button>
@@ -465,7 +474,7 @@
       <nav id="nav" class="gaveta-nav"></nav>
       <div class="gaveta-pie">
         <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
-        <div class="gaveta-vers">Mi Negocio · <span class="ver-app">v35</span></div>
+        <div class="gaveta-vers">Mi Negocio · <span class="ver-app">v36</span></div>
       </div>
     </aside>
 
@@ -1424,10 +1433,9 @@ var PAGINAS = [
 var METODOS = [
   ['efectivo_usd', 'Efectivo $'],
   ['efectivo_ves', 'Efectivo Bs'],
-  ['debito', 'Débito'],
-  ['credito', 'Crédito / Punto'],
-  ['transferencia', 'Transferencia'],
-  ['mixto', 'Mixto'],
+  ['pagomovil', 'Pagomóvil'],
+  ['pdv', 'PDV'],
+  ['usdt', 'USDT'],
   ['otro', 'Otro']
 ];
 var CATEGORIAS = ['Materiales', 'Ferretería', 'Pintura', 'Herramientas', 'Acabados', 'Eléctrico', 'Plomería', 'General'];
@@ -1567,8 +1575,8 @@ async function iniciarApp() {
   // Comprobación de versión: el servidor debe coincidir con esta página.
   API.infoServidor().then(function (sv) {
     try {
-      if (sv && sv.version && sv.version !== 'v35' && window.__avisar) {
-        window.__avisar('La página es v35, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v35).', true);
+      if (sv && sv.version && sv.version !== 'v36' && window.__avisar) {
+        window.__avisar('La página es v36, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v36).', true);
       }
     } catch (e) {}
   }).catch(function () {});
@@ -1724,7 +1732,9 @@ function asegurarGavetaCarrito() {
     '<div id="pos-tot-usd">Total: $ 0,00</div>' +
     '<small id="pos-tot-ves">Bs 0,00</small>' +
     '</div>' +
-    '<select id="pos-metodo" style="width:auto;max-width:150px">' + metodosHTML() + '</select>' +
+    '<select id="pos-metodo" style="width:auto;max-width:160px">' + metodosHTML() + '</select>' +
+    // Solo aparece cuando el método elegido es "Otro"
+    '<input id="pos-metodo-otro" class="cg-otro" placeholder="Especificar el pago (ej: depósito, otra billetera…)" maxlength="40" autocomplete="off" style="display:none">' +
     '<button class="btn btn-ok" id="pos-cobrar">Cobrar</button>' +
     '</div>';
   document.body.appendChild(g);
@@ -1734,6 +1744,14 @@ function asegurarGavetaCarrito() {
   fab.setAttribute('aria-label', 'Abrir la factura');
   fab.innerHTML = '🛒<span class="fab-badge" id="carrito-fab-badge" style="display:none">0</span>';
   document.body.appendChild(fab);
+  // "Otro" muestra el campo para especificar; los demás métodos lo ocultan.
+  var selM = el('pos-metodo');
+  var selO = el('pos-metodo-otro');
+  if (selM && selO) {
+    var sinc = function () { selO.style.display = selM.value === 'otro' ? '' : 'none'; };
+    selM.addEventListener('change', sinc);
+    sinc();
+  }
 }
 
 function gavetaCarritoAbierta() {
@@ -1918,9 +1936,15 @@ async function cobrarVenta() {
       telefono: (el('pos-cli-tel') ? el('pos-cli-tel').value : '').trim(),
       direccion: (el('pos-cli-dir') ? el('pos-cli-dir').value : '').trim()
     };
-    var r = await API.registrarVenta({ items: items, metodo: el('pos-metodo').value, nota: '', cliente: cliente });
+    var metodo = el('pos-metodo').value;
+    var espec = (metodo === 'otro' && el('pos-metodo-otro'))
+      ? el('pos-metodo-otro').value.trim() : '';
+    var nota = espec ? 'Método de pago: ' + espec : '';
+    var r = await API.registrarVenta({ items: items, metodo: metodo, nota: nota, cliente: cliente });
     CARRITO = [];
     ['pos-cli-nombre', 'pos-cli-doc', 'pos-cli-tel', 'pos-cli-dir'].forEach(function (id) { var x = el(id); if (x) x.value = ''; });
+    var inpOtro = el('pos-metodo-otro');
+    if (inpOtro) inpOtro.value = '';
     pintarCarrito();
     toast('✅ Venta registrada: ' + fmtUSD(r.totalUSD) + ' · ' + fmtVES(r.totalVES), 'ok');
     await cargarProductos();
@@ -2073,9 +2097,9 @@ function formularioProducto(prod) {
           var tipo = r === null ? 'null' : r === undefined ? 'undefined' : typeof r;
           var extra = DEMO ? ' La app está en MODO DEMO (sin servidor).' : '';
           API.infoServidor().then(function (sv) {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v35 en la pantalla de entrada).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v36 en la pantalla de entrada).');
           }).catch(function () {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v35).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v36).');
           });
         })();
       }
