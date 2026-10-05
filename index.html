@@ -454,7 +454,7 @@
     <div class="login-card">
       <div class="logo">🏪</div>
       <h1>Bodegon Evolution</h1>
-      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v38</span></p>
+      <p class="sub">Ventas · Inventario · Control · <span class="ver-app">v39</span></p>
       <input id="in-usr" type="text" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
       <input id="in-pwd" type="password" placeholder="Contraseña" autocomplete="current-password">
       <button id="btn-login" class="btn btn-primario btn-ancho">Entrar</button>
@@ -489,7 +489,7 @@
       <nav id="nav" class="gaveta-nav"></nav>
       <div class="gaveta-pie">
         <button class="btn btn-suave btn-ancho" id="btn-salir">⎋ Cerrar sesión</button>
-        <div class="gaveta-vers">Bodegon Evolution · <span class="ver-app">v38</span></div>
+        <div class="gaveta-vers">Bodegon Evolution · <span class="ver-app">v39</span></div>
       </div>
     </aside>
 
@@ -526,6 +526,7 @@ var S = {
   tasa: null,
   fechaTasa: '',
   fuenteTasa: '',
+  tasaManual: false,
   pagina: 'inicio',
   cacheProds: [],
   errProds: '',
@@ -878,8 +879,9 @@ var API = {
   cambiarEstadoUsuario: function (u, a) { return apiGrabar('cambiarEstadoUsuario', [S.tok, u, a], ['usuarios', 'empleados', 'dashboard']); },
   cambiarRolUsuario: function (u, r) { return apiGrabar('cambiarRolUsuario', [S.tok, u, r], ['usuarios']); },
   getTasaVigente: function () { return apiLlamada('getTasaVigente', [S.tok]); },
-  actualizarTasa: function () { return apiLlamada('actualizarTasa', [S.tok]); },
+  actualizarTasa: function () { return apiGrabar('actualizarTasa', [S.tok], ['dashboard']); },
   setTasaManual: function (t) { return apiGrabar('setTasaManual', [S.tok, t], ['dashboard']); },
+  quitarTasaManual: function () { return apiGrabar('quitarTasaManual', [S.tok], ['dashboard']); },
   listarProductos: function () { return apiLlamada('listarProductos', [S.tok]); },
   guardarProducto: function (p) { return apiGrabar('guardarProducto', [S.tok, p], ['productos', 'dashboard']); },
   infoServidor: function () { return apiLlamada('infoServidor', []); },
@@ -939,6 +941,7 @@ function mockApi(fn, args) {
     getTasaVigente: function () { return tasaMock; },
     actualizarTasa: function () { return tasaMock; },
     setTasaManual: function () { return tasaMock; },
+    quitarTasaManual: function () { return tasaMock; },
     listarProductos: function () { return prods; },
     buscarPorCodigo: function () { return null; },
     listarVentas: function () {
@@ -964,7 +967,7 @@ function mockApi(fn, args) {
 function actualizarChipTasa() {
   var chip = el('chip-tasa');
   if (!chip) return;
-  chip.textContent = (S.tasa ? 'Bs ' + fmtNum(S.tasa) + ' / $' : 'Tasa: …');
+  chip.textContent = (S.tasa ? 'Bs ' + fmtNum(S.tasa) + ' / $' + (S.tasaManual ? ' · manual' : '') : 'Tasa: …');
   chip.classList.toggle('desactivado', !S.tasa);
 }
 
@@ -975,6 +978,7 @@ async function refrescarTasa() {
       S.tasa = num(t.tasa);
       S.fechaTasa = t.fecha || '';
       S.fuenteTasa = t.fuente || '';
+      S.tasaManual = !!t.manual;
     }
     actualizarChipTasa();
   } catch (e) {
@@ -1644,8 +1648,8 @@ async function iniciarApp() {
   // Comprobación de versión: el servidor debe coincidir con esta página.
   API.infoServidor().then(function (sv) {
     try {
-      if (sv && sv.version && sv.version !== 'v38' && window.__avisar) {
-        window.__avisar('La página es v38, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v38).', true);
+      if (sv && sv.version && sv.version !== 'v39' && window.__avisar) {
+        window.__avisar('La página es v39, pero el servidor está en la versión ' + sv.version + '. Cierra esta pestaña y abre el enlace oficial (debe decir v39).', true);
       }
     } catch (e) {}
   }).catch(function () {});
@@ -1689,12 +1693,13 @@ render.inicio = async function () {
     }
     if (S.tasa === null && d.tasa && num(d.tasa.tasa)) {
       S.tasa = num(d.tasa.tasa);
+      S.tasaManual = !!d.tasa.manual;
       actualizarChipTasa();
     }
     var sb = (d.stockBajo || []).slice(0, 6);
     pintar(
       '<div class="tarjeta"><div class="fila-entre">' +
-      '<div><strong>💱 Tasa BCV vigente</strong><br><span class="muted">' + esc(d.tasa && d.tasa.fecha) + ' · ' + esc(d.tasa && d.tasa.fuente) + '</span></div>' +
+      '<div><strong>💱 Tasa vigente</strong><br><span class="muted">' + esc(d.tasa && d.tasa.fecha) + ' · ' + esc(d.tasa && d.tasa.fuente) + (d.tasa && d.tasa.manual ? ' · manual' : '') + '</span></div>' +
       '<div class="k-azul" style="font-size:19px;font-weight:800">Bs ' + fmtNum(num(d.tasa && d.tasa.tasa)) + ' / $</div>' +
       '</div></div>' +
       '<div class="grid-cards" style="margin-top:14px">' +
@@ -2288,9 +2293,9 @@ function formularioProducto(prod) {
           var tipo = r === null ? 'null' : r === undefined ? 'undefined' : typeof r;
           var extra = DEMO ? ' La app está en MODO DEMO (sin servidor).' : '';
           API.infoServidor().then(function (sv) {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v38 en la pantalla de entrada).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' El servidor está en la versión ' + (sv && sv.version ? sv.version : '?') + '. Cierra esta pestaña y abre el enlace oficial (debe decir v39 en la pantalla de entrada).');
           }).catch(function () {
-            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v38).');
+            window.__avisar('El guardado llegó vacío a la app (respuesta: ' + tipo + ').' + extra + ' No se pudo consultar el servidor — parece que estás sin conexión o con una página vieja. Recarga con el enlace oficial (debe decir v39).');
           });
         })();
       }
@@ -3083,21 +3088,35 @@ async function pintarTasaAdmin() {
   if (!cont) return;
   var t = null;
   try { t = await API.getTasaVigente(); } catch (e) { t = null; }
-  if (!t || typeof t !== 'object') t = { tasa: 0, fecha: '', fuente: '', historico: [] };
-  S.tasa = num(t.tasa); S.fechaTasa = t.fecha || ''; S.fuenteTasa = t.fuente || '';
+  if (!t || typeof t !== 'object') t = { tasa: 0, fecha: '', fuente: '', manual: false, historico: [] };
+  S.tasa = num(t.tasa); S.fechaTasa = t.fecha || ''; S.fuenteTasa = t.fuente || ''; S.tasaManual = !!t.manual;
   actualizarChipTasa();
+  var fuenteTxt = t.manual ? 'fijada por ti' : (t.fuente === 'bcv_sitio' ? 'BCV oficial' : (t.fuente === 'bcv_api' ? 'BCV (dolarapi)' : (t.fuente || '—')));
   var hist = (t.historico || []).slice(0, 10);
   cont.innerHTML = '<div class="fila-entre"><div><div class="k-num k-azul">Bs ' + fmtNum(t.tasa) + ' / $</div>' +
-    '<div class="muted">Fecha: ' + esc(t.fecha) + ' · Fuente: ' + esc(t.fuente) + '</div></div></div>' +
-    '<div class="fila-botones">' +
+    '<div class="muted">Fecha: ' + esc(t.fecha) + ' · Fuente: ' + esc(fuenteTxt) + '</div></div>' +
+    '<span class="etq ' + (t.manual ? 'etq-azul' : 'etq-ok') + '">' + (t.manual ? '✋ Manual' : '✅ Automática') + '</span></div>' +
+    (t.manual ? '<div class="aviso aviso-ok" style="margin-top:10px">Tasa manual activa: las ventas usan <b>Bs ' + fmtNum(t.tasa) + ' / $</b>. Se mantiene hasta que la quites o actualices desde el BCV.</div>' : '') +
+    '<div class="fila-botones" style="margin-top:10px">' +
     '<button class="btn btn-primario" id="ad-tasa-act">↻ Actualizar desde BCV</button>' +
-    '<button class="btn" id="ad-tasa-man">✏️ Fijar manual</button></div>' +
+    (t.manual
+      ? '<button class="btn btn-peligro" id="ad-tasa-quita">✖ Quitar manual</button>'
+      : '<button class="btn" id="ad-tasa-man">✏️ Fijar manual</button>') +
+    '</div>' +
+    '<p class="muted" style="margin-top:8px">El BCV publica los <b>viernes después de las 5:00 p. m.</b> la tasa del lunes siguiente. La app la busca sola el viernes en la noche, el sábado y el domingo para que vendas con esa tasa.</p>' +
     '<div id="ad-tasa-hist"></div>';
   el('ad-tasa-act').addEventListener('click', async function () {
     try { await API.actualizarTasa(); toast('Tasa actualizada desde el BCV', 'ok'); pintarTasaAdmin(); }
     catch (e) { toast(e.message, 'error'); }
   });
-  el('ad-tasa-man').addEventListener('click', formularioTasaManual);
+  if (t.manual) {
+    el('ad-tasa-quita').addEventListener('click', async function () {
+      try { await API.quitarTasaManual(); toast('Tasa manual quitada: usa el BCV automático', 'ok'); pintarTasaAdmin(); }
+      catch (e) { toast(e.message, 'error'); }
+    });
+  } else {
+    el('ad-tasa-man').addEventListener('click', formularioTasaManual);
+  }
   if (hist.length) {
     el('ad-tasa-hist').innerHTML = '<h3 style="font-size:14px">Historial reciente</h3><div class="tabla-envoltura"><table class="tabla"><thead><tr>' +
       '<th>Fecha</th><th class="der">Tasa</th><th>Fuente</th></tr></thead><tbody>' +
@@ -3108,15 +3127,21 @@ async function pintarTasaAdmin() {
 
 function formularioTasaManual() {
   abrirModal(
-    '<div class="modal-tope"><h3>Fijar tasa manual</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
-    '<p class="muted">Úsala solo como respaldo si el API del BCV no está disponible. La siguiente sincronización automática la actualizará.</p>' +
+    '<div class="modal-tope"><h3>✏️ Fijar tasa manual</h3><button class="btn-icono" onclick="cerrarModal()">✕</button></div>' +
+    '<p class="muted">Fija la tasa que la app usará para vender. Son esos casos donde el control lo llevas tú: por ejemplo, el viernes en la noche para vender todo el fin de semana con la tasa que el BCV publicó para el lunes.</p>' +
     '<label class="campo">Tasa (Bs por $)</label><input id="tm-tasa" type="number" step="0.0001" min="1" value="' + (S.tasa ? S.tasa : '') + '">' +
     '<div class="modal-acciones"><button class="btn btn-suave" onclick="cerrarModal()">Cancelar</button>' +
     '<button class="btn btn-primario" id="tm-guardar">Guardar</button></div>'
   );
   el('tm-guardar').addEventListener('click', async function () {
-    try { await API.setTasaManual(num(el('tm-tasa').value)); cerrarModal(); toast('Tasa fijada', 'ok'); pintarTasaAdmin(); }
-    catch (e) { toast(e.message, 'error'); }
+    try {
+      var v = num(el('tm-tasa').value);
+      var r = await API.setTasaManual(v);
+      cerrarModal();
+      if (r && typeof r === 'object') { S.tasa = num(r.tasa); S.tasaManual = true; S.fuenteTasa = 'manual'; actualizarChipTasa(); }
+      toast('Tasa manual activada: Bs ' + fmtNum(v) + ' / $', 'ok');
+      pintarTasaAdmin();
+    } catch (e) { toast(e.message, 'error'); }
   });
 }
 
